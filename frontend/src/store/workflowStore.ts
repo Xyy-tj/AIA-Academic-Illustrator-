@@ -27,6 +27,7 @@ interface WorkflowState {
     generatedImage: string | null;
     referenceImages: string[]; // Base64 encoded
     history: HistoryItem[];
+    sessionId: string | null;
 
     // Hydration flag
     _hasHydrated: boolean;
@@ -39,6 +40,7 @@ interface WorkflowState {
     setPaperContent: (content: string) => void;
     setGeneratedSchema: (schema: string) => void;
     setGeneratedImage: (image: string | null) => void;
+    setSessionId: (id: string | null) => void;
     addReferenceImage: (image: string) => void;
     removeReferenceImage: (index: number) => void;
     clearReferenceImages: () => void;
@@ -73,6 +75,7 @@ export const useWorkflowStore = create<WorkflowState>()(
             generatedImage: null,
             referenceImages: [],
             history: [],
+            sessionId: null,
             _hasHydrated: false,
 
             // Actions
@@ -83,6 +86,7 @@ export const useWorkflowStore = create<WorkflowState>()(
             setPaperContent: (content) => set({ paperContent: content }),
             setGeneratedSchema: (schema) => set({ generatedSchema: schema }),
             setGeneratedImage: (image) => set({ generatedImage: image }),
+            setSessionId: (id) => set({ sessionId: id }),
 
             addReferenceImage: (image) => set((state) => ({
                 referenceImages: [...state.referenceImages, image]

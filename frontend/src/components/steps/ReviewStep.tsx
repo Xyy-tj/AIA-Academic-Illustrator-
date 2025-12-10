@@ -5,11 +5,13 @@ import { Loader2, Image as ImageIcon, X, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useWorkflowStore } from '@/store/workflowStore';
+import { useAuthStore } from '@/store/authStore';
 import { useTranslation } from '@/lib/i18n';
-import { renderImage } from '@/lib/api';
+import { renderImage, fetchUser } from '@/lib/api';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 
 // Dynamic import for Monaco Editor (SSR disabled)
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), {
@@ -30,24 +32,20 @@ export function ReviewStep() {
         removeReferenceImage,
         setGeneratedImage,
         setCurrentStep,
-        visionConfig,
         addToHistory,
+        sessionId,
     } = useWorkflowStore();
     const t = useTranslation(language);
     const [isRendering, setIsRendering] = useState(false);
     const [mobileTab, setMobileTab] = useState<'source' | 'editor' | 'reference'>('editor');
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const router = useRouter();
 
     const validateSchema = (schema: string): boolean => {
         return schema.includes('---BEGIN PROMPT---') && schema.includes('---END PROMPT---');
     };
 
     const handleRender = async () => {
-        if (!visionConfig.apiKey) {
-            toast.error(t('missingApiKey'));
-            return;
-        }
-
         if (!validateSchema(generatedSchema)) {
             toast.error(t('schemaError'));
             return;
@@ -55,18 +53,27 @@ export function ReviewStep() {
 
         setIsRendering(true);
         try {
-            const response = await renderImage(generatedSchema, visionConfig, referenceImages);
+            const response = await renderImage(generatedSchema, referenceImages, sessionId || undefined);
             if (response.imageUrl) {
                 setGeneratedImage(response.imageUrl);
                 addToHistory({ schema: generatedSchema, imageUrl: response.imageUrl });
                 setCurrentStep(3);
                 toast.success('Image rendered successfully!');
+                try {
+                    const user = await fetchUser();
+                    useAuthStore.getState().setUser(user);
+                } catch {}
             } else {
                 toast.error('No image was generated. Please check your model configuration.');
             }
         } catch (error) {
-            console.error(error);
-            toast.error(t('generationFailed'));
+            const isUnauthorized = error instanceof Error && (((error as any).status === 401) || error.message === 'UNAUTHORIZED' || error.message.includes('Could not validate credentials'));
+            if (isUnauthorized) {
+                toast.error(t('unauthorized'));
+                router.push('/login');
+            } else {
+                toast.error(t('generationFailed'));
+            }
         } finally {
             setIsRendering(false);
         }

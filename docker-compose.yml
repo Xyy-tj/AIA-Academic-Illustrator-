@@ -1,0 +1,26 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./backend/database.db:/app/database.db
+      - ./backend/logs:/app/logs
+    restart: always
+    environment:
+      - SECRET_KEY=super-secret-key-for-dev-only-change-me-in-prod
+      # - OPENAI_API_KEY=... # If you want to support env vars for API keys in future
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: http://localhost:8001
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: always

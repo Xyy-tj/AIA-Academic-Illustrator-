@@ -49,6 +49,7 @@ export const translations = {
         // Errors
         missingApiKey: 'Please configure your API key in Settings',
         generationFailed: 'Generation failed. Please try again.',
+        unauthorized: 'Not logged in. Please sign in first.',
     },
     zh: {
         // Header
@@ -100,6 +101,7 @@ export const translations = {
         // Errors
         missingApiKey: '请在设置中配置您的 API 密钥',
         generationFailed: '生成失败，请重试。',
+        unauthorized: '未登录，请先登录。',
     },
 } as const;
 

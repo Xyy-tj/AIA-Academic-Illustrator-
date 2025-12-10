@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
-import { SettingsModal } from '@/components/SettingsModal';
 import { Stepper } from '@/components/Stepper';
 import { ArchitectStep } from '@/components/steps/ArchitectStep';
 import { ReviewStep } from '@/components/steps/ReviewStep';
@@ -12,7 +11,6 @@ import { AnimatePresence, motion } from 'framer-motion';
 
 export default function Home() {
   const { currentStep, _hasHydrated } = useWorkflowStore();
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Prevent hydration mismatch
   if (!_hasHydrated) {
@@ -31,8 +29,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-slate-50/50">
-      <Header onOpenSettings={() => setSettingsOpen(true)} />
-      <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
+      <Header />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
         <Stepper />

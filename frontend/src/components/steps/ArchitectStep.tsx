@@ -6,9 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useWorkflowStore } from '@/store/workflowStore';
 import { useTranslation } from '@/lib/i18n';
-import { generateSchema } from '@/lib/api';
+import { generateSchema, fetchUser } from '@/lib/api';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/store/authStore';
 
 export function ArchitectStep() {
     const {
@@ -17,19 +19,15 @@ export function ArchitectStep() {
         setPaperContent,
         setGeneratedSchema,
         setCurrentStep,
-        logicConfig,
+        setSessionId,
     } = useWorkflowStore();
     const t = useTranslation(language);
     const [isGenerating, setIsGenerating] = useState(false);
     const [uploadedFiles, setUploadedFiles] = useState<{ name: string; base64: string; type: string }[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const router = useRouter();
 
     const handleGenerate = async () => {
-        if (!logicConfig.apiKey) {
-            toast.error(t('missingApiKey'));
-            return;
-        }
-
         if (!paperContent.trim() && uploadedFiles.length === 0) {
             toast.error(language === 'zh' ? '请输入文本或上传文件' : 'Please enter text or upload files');
             return;
@@ -46,13 +44,25 @@ export function ArchitectStep() {
                     ? '请分析上传的文档并生成视觉架构。'
                     : 'Please analyze the uploaded document(s) and generate a Visual Schema.');
 
-            const response = await generateSchema(contentToSend, logicConfig, inputImages);
+            const newSessionId = crypto.randomUUID();
+            setSessionId(newSessionId);
+            const response = await generateSchema(contentToSend, inputImages, newSessionId);
             setGeneratedSchema(response.schema);
+            setSessionId(response.session_id);
             setCurrentStep(2);
             toast.success(language === 'zh' ? '蓝图生成成功！' : 'Blueprint generated successfully!');
+            try {
+                const user = await fetchUser();
+                useAuthStore.getState().setUser(user);
+            } catch {}
         } catch (error) {
-            console.error(error);
-            toast.error(t('generationFailed'));
+            const isUnauthorized = error instanceof Error && (((error as any).status === 401) || error.message === 'UNAUTHORIZED' || error.message.includes('Could not validate credentials'));
+            if (isUnauthorized) {
+                toast.error(t('unauthorized'));
+                router.push('/login');
+            } else {
+                toast.error(t('generationFailed'));
+            }
         } finally {
             setIsGenerating(false);
         }
