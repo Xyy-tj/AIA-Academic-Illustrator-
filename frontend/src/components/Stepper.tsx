@@ -23,69 +23,83 @@ export function Stepper() {
     };
 
     return (
-        <div className="w-full max-w-3xl mx-auto py-8">
-            <div className="flex items-center justify-between">
-                {steps.map((item, index) => (
-                    <div key={item.step} className="flex items-center">
-                        {/* Step indicator */}
-                        <button
-                            onClick={() => canNavigateTo(item.step) && setCurrentStep(item.step)}
-                            disabled={!canNavigateTo(item.step)}
-                            className={`relative flex flex-col items-center ${canNavigateTo(item.step) ? 'cursor-pointer' : 'cursor-not-allowed'
-                                }`}
-                        >
-                            {/* Circle */}
-                            <motion.div
-                                className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all ${currentStep === item.step
-                                        ? 'bg-indigo-600 border-indigo-600 text-white'
-                                        : currentStep > item.step
-                                            ? 'bg-emerald-500 border-emerald-500 text-white'
-                                            : 'bg-white border-slate-300 text-slate-400'
-                                    }`}
-                                whileHover={canNavigateTo(item.step) ? { scale: 1.05 } : {}}
-                                whileTap={canNavigateTo(item.step) ? { scale: 0.95 } : {}}
-                            >
-                                {currentStep > item.step ? (
-                                    <Check className="w-5 h-5" />
-                                ) : (
-                                    <span className="font-semibold">{item.step}</span>
-                                )}
-                            </motion.div>
+        <div className="w-full max-w-4xl mx-auto py-8">
+            <div className="relative flex items-center justify-between px-4">
+                {/* Background Line */}
+                <div className="absolute top-1/2 left-0 w-full h-1 bg-slate-100 rounded-full -z-10" />
+                
+                {/* Progress Line */}
+                <motion.div 
+                    className="absolute top-1/2 left-0 h-1 bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full -z-10"
+                    initial={{ width: '0%' }}
+                    animate={{ 
+                        width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` 
+                    }}
+                    transition={{ duration: 0.5, ease: "easeInOut" }}
+                />
 
-                            {/* Label */}
-                            <div className="mt-3 text-center">
-                                <p
-                                    className={`font-medium text-sm ${currentStep === item.step ? 'text-indigo-600' : 'text-slate-600'
-                                        }`}
-                                >
+                {steps.map((item, index) => {
+                    const isActive = currentStep === item.step;
+                    const isCompleted = currentStep > item.step;
+                    const isNavigable = canNavigateTo(item.step);
+
+                    return (
+                        <div key={item.step} className="relative flex flex-col items-center group">
+                            <button
+                                onClick={() => isNavigable && setCurrentStep(item.step)}
+                                disabled={!isNavigable}
+                                className={`
+                                    relative flex items-center justify-center w-12 h-12 rounded-full border-4 transition-all duration-300 z-10
+                                    ${isActive 
+                                        ? 'bg-white border-indigo-100 shadow-lg shadow-indigo-500/20 scale-110' 
+                                        : isCompleted
+                                            ? 'bg-indigo-600 border-indigo-600 shadow-md shadow-indigo-500/10'
+                                            : 'bg-white border-slate-100 text-slate-300'
+                                    }
+                                    ${isNavigable ? 'cursor-pointer hover:border-indigo-200' : 'cursor-not-allowed'}
+                                `}
+                            >
+                                {isCompleted ? (
+                                    <Check className="w-6 h-6 text-white" />
+                                ) : (
+                                    <span className={`text-lg font-bold ${isActive ? 'text-indigo-600' : 'text-slate-400'}`}>
+                                        {item.step}
+                                    </span>
+                                )}
+                                
+                                {isActive && (
+                                    <motion.div
+                                        layoutId="step-ring"
+                                        className="absolute inset-0 rounded-full border-2 border-indigo-600"
+                                        initial={{ opacity: 0, scale: 0.8 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        transition={{ duration: 0.3 }}
+                                    />
+                                )}
+                            </button>
+
+                            {/* Label Card */}
+                            <div className={`
+                                absolute top-16 w-48 p-3 rounded-xl border transition-all duration-300 backdrop-blur-sm
+                                flex flex-col items-center text-center
+                                ${isActive 
+                                    ? 'bg-white/80 border-indigo-100 shadow-xl shadow-indigo-500/5 -translate-y-1 opacity-100' 
+                                    : 'bg-transparent border-transparent opacity-60 grayscale hover:grayscale-0'
+                                }
+                            `}>
+                                <p className={`font-bold text-sm mb-1 ${isActive ? 'text-indigo-900' : 'text-slate-500'}`}>
                                     {t(item.titleKey as any)}
                                 </p>
-                                <p className="text-xs text-slate-400 mt-0.5">
+                                <p className="text-xs text-slate-400 leading-relaxed">
                                     {t(item.descKey as any)}
                                 </p>
                             </div>
-
-                            {/* Active indicator */}
-                            {currentStep === item.step && (
-                                <motion.div
-                                    layoutId="activeStep"
-                                    className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-indigo-600"
-                                />
-                            )}
-                        </button>
-
-                        {/* Connector line */}
-                        {index < steps.length - 1 && (
-                            <div className="flex-1 mx-4 h-0.5 min-w-[80px]">
-                                <div
-                                    className={`h-full rounded-full transition-colors ${currentStep > item.step ? 'bg-emerald-500' : 'bg-slate-200'
-                                        }`}
-                                />
-                            </div>
-                        )}
-                    </div>
-                ))}
+                        </div>
+                    );
+                })}
             </div>
+            {/* Spacer for the labels */}
+            <div className="h-24" />
         </div>
     );
 }

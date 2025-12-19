@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Toaster } from "@/components/ui/sonner";
+import { FaviconUpdater } from "@/components/FaviconUpdater";
+import { AnnouncementModal } from "@/components/announcement/AnnouncementModal";
 import "./globals.css";
+import { SiteFooter } from "@/components/SiteFooter";
 
 export const metadata: Metadata = {
   title: "Academic Illustrator | AI-Powered Scientific Diagrams",
@@ -18,7 +21,10 @@ export default function RootLayout({
       <body
         className={`font-sans antialiased`}
       >
+        <FaviconUpdater />
+        <AnnouncementModal />
         {children}
+        <SiteFooter />
         <Toaster position="top-right" richColors />
       </body>
     </html>

@@ -26,16 +26,20 @@ interface WorkflowState {
     generatedSchema: string;
     generatedImage: string | null;
     referenceImages: string[]; // Base64 encoded
+    chartLanguage: 'en' | 'zh';
     history: HistoryItem[];
     sessionId: string | null;
+    announcementOpen: boolean;
 
     // Hydration flag
     _hasHydrated: boolean;
+    _genUUID: () => string;
 
     // Actions
     setLogicConfig: (config: ModelConfig) => void;
     setVisionConfig: (config: ModelConfig) => void;
     setLanguage: (lang: 'en' | 'zh') => void;
+    setAnnouncementOpen: (open: boolean) => void;
     setCurrentStep: (step: 1 | 2 | 3) => void;
     setPaperContent: (content: string) => void;
     setGeneratedSchema: (schema: string) => void;
@@ -44,6 +48,7 @@ interface WorkflowState {
     addReferenceImage: (image: string) => void;
     removeReferenceImage: (index: number) => void;
     clearReferenceImages: () => void;
+    setChartLanguage: (lang: 'en' | 'zh') => void;
     addToHistory: (item: Omit<HistoryItem, 'id' | 'timestamp'>) => void;
     loadFromHistory: (id: string) => void;
     resetProject: () => void;
@@ -66,6 +71,18 @@ export const useWorkflowStore = create<WorkflowState>()(
     persist(
         (set, get) => ({
             // Initial state
+            // UUID fallback
+            _genUUID: () => {
+                try {
+                    const c: any = (globalThis as any).crypto;
+                    if (c && typeof c.randomUUID === 'function') return c.randomUUID();
+                } catch {}
+                return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (ch) => {
+                    const r = Math.random() * 16 | 0;
+                    const v = ch === 'x' ? r : (r & 0x3 | 0x8);
+                    return v.toString(16);
+                });
+            },
             logicConfig: defaultLogicConfig,
             visionConfig: defaultVisionConfig,
             language: 'zh',
@@ -74,19 +91,23 @@ export const useWorkflowStore = create<WorkflowState>()(
             generatedSchema: '',
             generatedImage: null,
             referenceImages: [],
+            chartLanguage: 'zh',
             history: [],
             sessionId: null,
+            announcementOpen: false,
             _hasHydrated: false,
 
             // Actions
             setLogicConfig: (config) => set({ logicConfig: config }),
             setVisionConfig: (config) => set({ visionConfig: config }),
             setLanguage: (lang) => set({ language: lang }),
+            setAnnouncementOpen: (open) => set({ announcementOpen: open }),
             setCurrentStep: (step) => set({ currentStep: step }),
             setPaperContent: (content) => set({ paperContent: content }),
             setGeneratedSchema: (schema) => set({ generatedSchema: schema }),
             setGeneratedImage: (image) => set({ generatedImage: image }),
             setSessionId: (id) => set({ sessionId: id }),
+            setChartLanguage: (lang) => set({ chartLanguage: lang }),
 
             addReferenceImage: (image) => set((state) => ({
                 referenceImages: [...state.referenceImages, image]
@@ -102,7 +123,7 @@ export const useWorkflowStore = create<WorkflowState>()(
                 history: [
                     {
                         ...item,
-                        id: crypto.randomUUID(),
+                        id: state._genUUID(),
                         timestamp: Date.now(),
                     },
                     ...state.history.slice(0, 9), // Keep last 10 items
@@ -136,6 +157,7 @@ export const useWorkflowStore = create<WorkflowState>()(
                 logicConfig: state.logicConfig,
                 visionConfig: state.visionConfig,
                 language: state.language,
+                chartLanguage: state.chartLanguage,
                 paperContent: state.paperContent,
                 generatedSchema: state.generatedSchema,
                 history: state.history,

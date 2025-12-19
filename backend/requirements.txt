@@ -10,3 +10,6 @@ pymupdf
 sqlmodel
 PyJWT
 passlib[bcrypt]
+pymysql
+cryptography
+psycopg2-binary

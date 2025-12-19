@@ -6,20 +6,33 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useWorkflowStore } from '@/store/workflowStore';
 import { useTranslation } from '@/lib/i18n';
-import { generateSchema, fetchUser } from '@/lib/api';
+import { generateSchema, fetchUser, API_BASE_URL } from '@/lib/api';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 
 export function ArchitectStep() {
+    const genUUID = () => {
+        try {
+            const c: any = (globalThis as any).crypto;
+            if (c && typeof c.randomUUID === 'function') return c.randomUUID();
+        } catch {}
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (ch) => {
+            const r = Math.random() * 16 | 0;
+            const v = ch === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    };
     const {
         language,
+        chartLanguage,
         paperContent,
         setPaperContent,
         setGeneratedSchema,
         setCurrentStep,
         setSessionId,
+        setChartLanguage,
     } = useWorkflowStore();
     const t = useTranslation(language);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -44,9 +57,10 @@ export function ArchitectStep() {
                     ? '请分析上传的文档并生成视觉架构。'
                     : 'Please analyze the uploaded document(s) and generate a Visual Schema.');
 
-            const newSessionId = crypto.randomUUID();
+            const newSessionId = genUUID();
             setSessionId(newSessionId);
-            const response = await generateSchema(contentToSend, inputImages, newSessionId);
+            console.debug('ArchitectStep generate start', { API_BASE_URL, sessionId: newSessionId, chartLanguage, hasImages: !!inputImages?.length, contentLength: contentToSend.length });
+            const response = await generateSchema(contentToSend, inputImages, newSessionId, chartLanguage);
             setGeneratedSchema(response.schema);
             setSessionId(response.session_id);
             setCurrentStep(2);
@@ -56,12 +70,14 @@ export function ArchitectStep() {
                 useAuthStore.getState().setUser(user);
             } catch {}
         } catch (error) {
+            console.error('ArchitectStep generate error', error);
             const isUnauthorized = error instanceof Error && (((error as any).status === 401) || error.message === 'UNAUTHORIZED' || error.message.includes('Could not validate credentials'));
             if (isUnauthorized) {
                 toast.error(t('unauthorized'));
                 router.push('/login');
             } else {
-                toast.error(t('generationFailed'));
+                const msg = error instanceof Error ? error.message : String(error);
+                toast.error(`${t('generationFailed')} ${msg}`);
             }
         } finally {
             setIsGenerating(false);
@@ -194,6 +210,21 @@ export function ArchitectStep() {
                         </motion.div>
                     )}
                 </AnimatePresence>
+
+                {/* Chart Language Selector */}
+                <div className="mt-4 flex items-center gap-3">
+                    <span className="text-sm text-slate-700">
+                        {language === 'zh' ? '图表语言' : 'Chart Language'}
+                    </span>
+                    <select
+                        value={chartLanguage}
+                        onChange={(e) => setChartLanguage(e.target.value as 'zh' | 'en')}
+                        className="h-9 px-3 border border-slate-200 rounded-lg text-sm bg-white"
+                    >
+                        <option value="zh">{language === 'zh' ? '中文' : 'Chinese'}</option>
+                        <option value="en">{language === 'zh' ? '英文' : 'English'}</option>
+                    </select>
+                </div>
 
                 {/* Hint */}
                 <p className="mt-3 text-xs text-slate-400">

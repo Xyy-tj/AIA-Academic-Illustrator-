@@ -37,6 +37,11 @@ export const translations = {
         renderImage: 'Render Image',
         rendering: 'Rendering...',
         schemaError: 'Invalid Schema Format: Please preserve the BEGIN/END tags.',
+        library: 'Reference Library',
+        recommendedReferences: 'Recommended Reference Images',
+        recommendedTemplates: 'Recommended Schema Templates',
+        addToReferences: 'Add to References',
+        insertTemplate: 'Insert Template',
 
         // Step 3
         generatedDiagram: 'Generated Diagram',
@@ -89,6 +94,11 @@ export const translations = {
         renderImage: '渲染图像',
         rendering: '渲染中...',
         schemaError: '无效的架构格式：请保留 BEGIN/END 标签。',
+        library: '参考图片库',
+        recommendedReferences: '系统推荐参考图',
+        recommendedTemplates: '系统推荐模板',
+        addToReferences: '加入参考图片',
+        insertTemplate: '插入模板',
 
         // Step 3
         generatedDiagram: '生成的图表',

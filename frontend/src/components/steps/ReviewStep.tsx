@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Loader2, Image as ImageIcon, X, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useWorkflowStore } from '@/store/workflowStore';
 import { useAuthStore } from '@/store/authStore';
 import { useTranslation } from '@/lib/i18n';
-import { renderImage, fetchUser } from '@/lib/api';
+import { renderImage, fetchUser, fetchReferenceLibrary, fetchSchemaTemplates, ReferenceItem, SchemaTemplateItem } from '@/lib/api';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
@@ -34,12 +34,31 @@ export function ReviewStep() {
         setCurrentStep,
         addToHistory,
         sessionId,
+        chartLanguage,
     } = useWorkflowStore();
     const t = useTranslation(language);
     const [isRendering, setIsRendering] = useState(false);
     const [mobileTab, setMobileTab] = useState<'source' | 'editor' | 'reference'>('editor');
     const fileInputRef = useRef<HTMLInputElement>(null);
     const router = useRouter();
+
+    const [systemReferences, setSystemReferences] = useState<ReferenceItem[]>([]);
+    const [schemaTemplates, setSchemaTemplates] = useState<SchemaTemplateItem[]>([]);
+
+    useEffect(() => {
+        (async () => {
+            try {
+                const [refs, tpls] = await Promise.all([
+                    fetchReferenceLibrary(),
+                    fetchSchemaTemplates(),
+                ]);
+                setSystemReferences(refs);
+                setSchemaTemplates(tpls);
+            } catch {
+                // ignore loading errors
+            }
+        })();
+    }, []);
 
     const validateSchema = (schema: string): boolean => {
         return schema.includes('---BEGIN PROMPT---') && schema.includes('---END PROMPT---');
@@ -53,7 +72,7 @@ export function ReviewStep() {
 
         setIsRendering(true);
         try {
-            const response = await renderImage(generatedSchema, referenceImages, sessionId || undefined);
+            const response = await renderImage(generatedSchema, referenceImages, sessionId || undefined, chartLanguage);
             if (response.imageUrl) {
                 setGeneratedImage(response.imageUrl);
                 addToHistory({ schema: generatedSchema, imageUrl: response.imageUrl });
@@ -76,6 +95,30 @@ export function ReviewStep() {
             }
         } finally {
             setIsRendering(false);
+        }
+    };
+
+    const addLibraryImage = async (urlOrData: string) => {
+        try {
+            if (urlOrData.startsWith('data:')) {
+                addReferenceImage(urlOrData);
+            } else {
+                const res = await fetch(urlOrData);
+                const blob = await res.blob();
+                const reader = new FileReader();
+                const base64Promise = new Promise<string>((resolve, reject) => {
+                    reader.onloadend = () => {
+                        resolve(reader.result as string);
+                    };
+                    reader.onerror = reject;
+                });
+                reader.readAsDataURL(blob);
+                const dataUrl = await base64Promise;
+                addReferenceImage(dataUrl);
+            }
+            toast.success(language === 'zh' ? '已加入参考图片' : 'Added to references');
+        } catch {
+            toast.error(language === 'zh' ? '加载参考图片失败' : 'Failed to load reference image');
         }
     };
 
@@ -207,6 +250,39 @@ export function ReviewStep() {
                         onFileSelect={handleFileSelect}
                         t={t}
                     />
+                    <div className="mt-6">
+                        <h4 className="font-medium text-slate-800 mb-2">{t('recommendedReferences')}</h4>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                            {systemReferences.map((item, idx) => (
+                                <div key={idx} className="border border-slate-200 rounded-lg overflow-hidden bg-white">
+                                    <img src={item.image_data} alt={item.title} className="w-full h-28 object-cover" />
+                                    <div className="p-2 flex items-center justify-between">
+                                        <span className="text-xs text-slate-600 truncate">{item.title}</span>
+                                        <Button size="sm" variant="outline" className="h-7 px-2"
+                                            onClick={() => addLibraryImage(item.image_data)}>
+                                            {t('addToReferences')}
+                                        </Button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="mt-6">
+                        <h4 className="font-medium text-slate-800 mb-2">{t('recommendedTemplates')}</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {schemaTemplates.map((tpl) => (
+                                <div key={tpl.id} className="border border-slate-200 rounded-lg p-3 bg-white">
+                                    <div className="text-sm font-medium text-slate-800">{tpl.title}</div>
+                                    <div className="text-xs text-slate-500 mt-1">{tpl.layout}</div>
+                                    <div className="mt-2">
+                                        <Button size="sm" className="h-8" onClick={() => setGeneratedSchema(tpl.content)}>
+                                            {t('insertTemplate')}
+                                        </Button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             </div>
 

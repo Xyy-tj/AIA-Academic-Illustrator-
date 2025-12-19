@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { useWorkflowStore } from '@/store/workflowStore';
 import { useTranslation } from '@/lib/i18n';
 import { motion } from 'framer-motion';
+import { resolveImageUrl } from '@/lib/utils';
 
 export function RendererStep() {
     const {
@@ -89,7 +90,7 @@ export function RendererStep() {
                             {generatedImage ? (
                                 <Card className="p-4 bg-white shadow-sm max-w-full">
                                     <img
-                                        src={generatedImage}
+                                        src={resolveImageUrl(generatedImage)}
                                         alt="Generated academic diagram"
                                         className="max-w-full max-h-[600px] object-contain"
                                     />
@@ -126,7 +127,7 @@ export function RendererStep() {
                                     >
                                         {item.imageUrl ? (
                                             <img
-                                                src={item.imageUrl}
+                                                src={resolveImageUrl(item.imageUrl)}
                                                 alt="History item"
                                                 className="w-full h-16 object-cover rounded mb-2"
                                             />

@@ -6,6 +6,7 @@ export interface User {
   username: string;
   is_admin: boolean;
   quota: number;
+  email?: string;
   created_at: string;
 }
 

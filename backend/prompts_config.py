@@ -10,6 +10,9 @@ ARCHITECT_PROMPT_TEMPLATE = """
 # Objective
 阅读我提供的论文内容，输出一份 [VISUAL SCHEMA]。这份 Schema 将被直接发送给 AI 绘图模型，因此必须使用**强硬的物理描述**。
 
+# Output Language
+请将所有输出中的文本标签（尤其是 "Key Text Labels"）严格使用{language_name_cn}，不得混用中英文，不得翻译为其他语言。
+
 # Phase 1: Layout Strategy Selector (关键步骤：布局决策)
 在生成 Schema 之前，请先分析论文逻辑，从以下**布局原型**中选择最合适的一个（或组合）：
 1. Linear Pipeline: 左→右流向 (适合 Data Processing, Encoding-Decoding)。
@@ -76,6 +79,9 @@ RENDERER_PROMPT_TEMPLATE = """
    * **ONLY render "Key Text Labels":** Only text inside double quotes (e.g., "[Text]") listed under "Key Text Labels" should appear in the diagram.
    * **Font:** Use a clean, bold Sans-Serif font (like Roboto or Helvetica) for all labels.
 
+4. **Label Language Policy:**
+   All text labels rendered in the diagram must be strictly in {language_name_en}. Do not translate or mix languages. Use exactly the labels provided in the schema.
+
 3. **Visual Schema Execution:**
    Translate the following structural blueprint into the final image:
 
@@ -100,11 +106,15 @@ RENDERER_WITH_REFERENCES_TEMPLATE = """
    * **Visuals:** Flat vector graphics, distinct geometric shapes, clean thin outlines, and soft pastel fills.
    * **Layout:** Strictly follow the spatial arrangement defined in the schema below.
    * **Vibe:** Technical, precise, clean background. NOT hand-drawn, NOT photorealistic, NOT 3D render.
+   * **Fonts:** 中文：宋体， 英文：times New Roman
 
 2. **CRITICAL TEXT CONSTRAINTS (Read Carefully):**
    * **DO NOT render meta-labels:** Do not write words like "ZONE 1", "LAYOUT CONFIGURATION", "Input", "Output", or "Container" inside the image.
    * **ONLY render "Key Text Labels":** Only text inside double quotes listed under "Key Text Labels" should appear in the diagram.
    * **Font:** Use a clean, bold Sans-Serif font for all labels.
+
+4. **Label Language Policy:**
+   All text labels rendered in the diagram must be strictly in {language_name_en}. Do not translate or mix languages. Use exactly the labels provided in the schema.
 
 3. **Visual Schema Execution:**
    Translate the following structural blueprint into the final image:

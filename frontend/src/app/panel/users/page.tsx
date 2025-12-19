@@ -1,16 +1,23 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { fetchAllUsers, updateUserQuota } from '@/lib/api';
+import { fetchAllUsers, updateUserQuota, adminCreateUser } from '@/lib/api';
 import { useAuthStore, User } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { Plus } from 'lucide-react';
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [newUsername, setNewUsername] = useState('');
+  const [newEmail, setNewEmail] = useState('');
+  const [creating, setCreating] = useState(false);
   const { user } = useAuthStore();
 
   useEffect(() => {
@@ -29,6 +36,29 @@ export default function AdminUsersPage() {
     }
   };
 
+  const handleCreateUser = async () => {
+    if (!newUsername.trim()) {
+      toast.error('Username is required');
+      return;
+    }
+    setCreating(true);
+    try {
+      await adminCreateUser({
+        username: newUsername,
+        email: newEmail || undefined
+      });
+      toast.success('User created successfully');
+      setIsCreateOpen(false);
+      setNewUsername('');
+      setNewEmail('');
+      loadUsers();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to create user');
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const handleQuotaUpdate = async (userId: number, newQuota: number) => {
     try {
       await updateUserQuota(userId, newQuota);
@@ -42,12 +72,56 @@ export default function AdminUsersPage() {
   if (loading) return <div className="p-8">Loading...</div>;
 
   return (
-    <div className="container mx-auto">
+    <div className="container mx-auto space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">User Management</h1>
+        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="w-4 h-4 mr-2" />
+              Create User
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create New User</DialogTitle>
+              <DialogDescription>
+                Create a new user with default password (123456).
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="username">Username (Required)</Label>
+                <Input 
+                  id="username" 
+                  value={newUsername} 
+                  onChange={(e) => setNewUsername(e.target.value)}
+                  placeholder="Enter username" 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email (Optional)</Label>
+                <Input 
+                  id="email" 
+                  type="email"
+                  value={newEmail} 
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  placeholder="Enter email" 
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
+              <Button onClick={handleCreateUser} disabled={creating}>
+                {creating ? 'Creating...' : 'Create User'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+
       <Card>
-        <CardHeader>
-          <CardTitle>User Management</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
               <thead>
@@ -100,4 +174,3 @@ export default function AdminUsersPage() {
     </div>
   );
 }
-
