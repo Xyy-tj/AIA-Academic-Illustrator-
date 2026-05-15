@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useWorkflowStore } from '@/store/workflowStore';
 import { useAuthStore } from '@/store/authStore';
 import { useTranslation } from '@/lib/i18n';
-import { renderImage, fetchUser, fetchReferenceLibrary, fetchSchemaTemplates, ReferenceItem, SchemaTemplateItem } from '@/lib/api';
+import { renderImage, fetchUser, fetchReferenceLibrary, fetchSchemaTemplates, ReferenceItem, SchemaTemplateItem, fetchPublicSettings } from '@/lib/api';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
@@ -39,6 +39,7 @@ export function ReviewStep() {
     const t = useTranslation(language);
     const [isRendering, setIsRendering] = useState(false);
     const [mobileTab, setMobileTab] = useState<'source' | 'editor' | 'reference'>('editor');
+    const [cost, setCost] = useState<number>(0);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const router = useRouter();
 
@@ -48,12 +49,14 @@ export function ReviewStep() {
     useEffect(() => {
         (async () => {
             try {
-                const [refs, tpls] = await Promise.all([
+                const [refs, tpls, settings] = await Promise.all([
                     fetchReferenceLibrary(),
                     fetchSchemaTemplates(),
+                    fetchPublicSettings()
                 ]);
                 setSystemReferences(refs);
                 setSchemaTemplates(tpls);
+                setCost(settings.cost_image_rendering || 1);
             } catch {
                 // ignore loading errors
             }
@@ -65,6 +68,13 @@ export function ReviewStep() {
     };
 
     const handleRender = async () => {
+        const { token } = useAuthStore.getState();
+        if (!token) {
+             useWorkflowStore.getState().setAuthModalTab('login');
+             useWorkflowStore.getState().setAuthModalOpen(true);
+             return;
+        }
+
         if (!validateSchema(generatedSchema)) {
             toast.error(t('schemaError'));
             return;
@@ -300,11 +310,11 @@ export function ReviewStep() {
                         </>
                     ) : (
                         <>
-                            <ImageIcon className="w-4 h-4 mr-2" />
-                            {t('renderImage')}
-                        </>
-                    )}
-                </Button>
+                                <ImageIcon className="w-4 h-4 mr-2" />
+                                {t('renderImage')} <span className="text-xs opacity-80 ml-1">({cost} 积分)</span>
+                            </>
+                        )}
+                    </Button>
             </div>
         </motion.div>
     );

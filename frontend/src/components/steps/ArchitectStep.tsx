@@ -1,16 +1,17 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Sparkles, Loader2, Paperclip, FileText, Image as ImageIcon, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useWorkflowStore } from '@/store/workflowStore';
 import { useTranslation } from '@/lib/i18n';
-import { generateSchema, fetchUser, API_BASE_URL } from '@/lib/api';
+import { generateSchema, fetchUser, API_BASE_URL, fetchPublicSettings } from '@/lib/api';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
+import { PromptExportButton } from '@/components/PromptExportButton';
 
 export function ArchitectStep() {
     const genUUID = () => {
@@ -37,10 +38,22 @@ export function ArchitectStep() {
     const t = useTranslation(language);
     const [isGenerating, setIsGenerating] = useState(false);
     const [uploadedFiles, setUploadedFiles] = useState<{ name: string; base64: string; type: string }[]>([]);
+    const [cost, setCost] = useState<number>(0);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const router = useRouter();
 
+    useEffect(() => {
+        fetchPublicSettings().then(s => setCost(s.cost_schema_generation || 1));
+    }, []);
+
     const handleGenerate = async () => {
+        const { token } = useAuthStore.getState();
+        if (!token) {
+             useWorkflowStore.getState().setAuthModalTab('login');
+             useWorkflowStore.getState().setAuthModalOpen(true);
+             return;
+        }
+
         if (!paperContent.trim() && uploadedFiles.length === 0) {
             toast.error(language === 'zh' ? '请输入文本或上传文件' : 'Please enter text or upload files');
             return;
@@ -234,7 +247,15 @@ export function ArchitectStep() {
                 </p>
 
                 {/* Generate Button */}
-                <div className="mt-6 flex justify-end">
+                <div className="mt-6 flex justify-between items-center">
+                     <PromptExportButton 
+                        promptType="architect"
+                        payload={{
+                            paper_content: paperContent
+                        }}
+                        disabled={!paperContent.trim() && uploadedFiles.length === 0}
+                    />
+
                     <Button
                         onClick={handleGenerate}
                         disabled={isGenerating || (!paperContent.trim() && uploadedFiles.length === 0)}
@@ -248,7 +269,7 @@ export function ArchitectStep() {
                         ) : (
                             <>
                                 <Sparkles className="w-4 h-4 mr-2" />
-                                {t('generateBlueprint')}
+                                {t('generateBlueprint')} <span className="text-xs opacity-80 ml-1">({cost} 积分)</span>
                             </>
                         )}
                     </Button>

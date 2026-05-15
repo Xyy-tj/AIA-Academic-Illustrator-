@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
+export type TabId = 'diagram' | 'translate' | 'extract' | 'super-resolution' | 'ppt-generator';
+
 export interface ModelConfig {
     baseUrl: string;
     apiKey: string;
@@ -21,15 +23,20 @@ interface WorkflowState {
 
     // App State
     language: 'en' | 'zh';
+    activeTab: TabId;
     currentStep: 1 | 2 | 3;
     paperContent: string;
     generatedSchema: string;
     generatedImage: string | null;
+    superResolutionImage: string | null;
     referenceImages: string[]; // Base64 encoded
     chartLanguage: 'en' | 'zh';
     history: HistoryItem[];
     sessionId: string | null;
     announcementOpen: boolean;
+    authModalOpen: boolean;
+    authModalTab: 'login' | 'register';
+    quotaModalOpen: boolean;
 
     // Hydration flag
     _hasHydrated: boolean;
@@ -39,11 +46,16 @@ interface WorkflowState {
     setLogicConfig: (config: ModelConfig) => void;
     setVisionConfig: (config: ModelConfig) => void;
     setLanguage: (lang: 'en' | 'zh') => void;
+    setActiveTab: (tab: TabId) => void;
     setAnnouncementOpen: (open: boolean) => void;
+    setAuthModalOpen: (open: boolean) => void;
+    setAuthModalTab: (tab: 'login' | 'register') => void;
+    setQuotaModalOpen: (open: boolean) => void;
     setCurrentStep: (step: 1 | 2 | 3) => void;
     setPaperContent: (content: string) => void;
     setGeneratedSchema: (schema: string) => void;
     setGeneratedImage: (image: string | null) => void;
+    setSuperResolutionImage: (image: string | null) => void;
     setSessionId: (id: string | null) => void;
     addReferenceImage: (image: string) => void;
     removeReferenceImage: (index: number) => void;
@@ -86,26 +98,36 @@ export const useWorkflowStore = create<WorkflowState>()(
             logicConfig: defaultLogicConfig,
             visionConfig: defaultVisionConfig,
             language: 'zh',
+            activeTab: 'diagram',
             currentStep: 1,
             paperContent: '',
             generatedSchema: '',
             generatedImage: null,
+            superResolutionImage: null,
             referenceImages: [],
             chartLanguage: 'zh',
             history: [],
             sessionId: null,
             announcementOpen: false,
+            authModalOpen: false,
+            authModalTab: 'login',
+            quotaModalOpen: false,
             _hasHydrated: false,
 
             // Actions
             setLogicConfig: (config) => set({ logicConfig: config }),
             setVisionConfig: (config) => set({ visionConfig: config }),
             setLanguage: (lang) => set({ language: lang }),
+            setActiveTab: (tab) => set({ activeTab: tab }),
             setAnnouncementOpen: (open) => set({ announcementOpen: open }),
+            setAuthModalOpen: (open) => set({ authModalOpen: open }),
+            setAuthModalTab: (tab) => set({ authModalTab: tab }),
+            setQuotaModalOpen: (open) => set({ quotaModalOpen: open }),
             setCurrentStep: (step) => set({ currentStep: step }),
             setPaperContent: (content) => set({ paperContent: content }),
             setGeneratedSchema: (schema) => set({ generatedSchema: schema }),
             setGeneratedImage: (image) => set({ generatedImage: image }),
+            setSuperResolutionImage: (image) => set({ superResolutionImage: image }),
             setSessionId: (id) => set({ sessionId: id }),
             setChartLanguage: (lang) => set({ chartLanguage: lang }),
 
@@ -157,6 +179,7 @@ export const useWorkflowStore = create<WorkflowState>()(
                 logicConfig: state.logicConfig,
                 visionConfig: state.visionConfig,
                 language: state.language,
+                activeTab: state.activeTab,
                 chartLanguage: state.chartLanguage,
                 paperContent: state.paperContent,
                 generatedSchema: state.generatedSchema,

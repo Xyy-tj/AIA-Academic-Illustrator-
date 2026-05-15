@@ -13,3 +13,9 @@ passlib[bcrypt]
 pymysql
 cryptography
 psycopg2-binary
+aiofiles
+alibabacloud_imageenhan20190930
+alibabacloud_tea_openapi
+alibabacloud_tea_util
+cos-python-sdk-v5
+Pillow

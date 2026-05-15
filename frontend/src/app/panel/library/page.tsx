@@ -17,31 +17,47 @@ import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Upload, Trash2 } from 'lucide-react';
+import { Upload, Trash2, Plus, Save, Image as ImageIcon, FileCode, GripVertical } from 'lucide-react';
 
 export default function LibraryAdminPage() {
     const { user } = useAuthStore();
     const [references, setReferences] = useState<ReferenceItem[]>([]);
     const [templates, setTemplates] = useState<SchemaTemplateItem[]>([]);
+    const [loading, setLoading] = useState(true);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Template Creation State
+    const [isCreateTemplateOpen, setIsCreateTemplateOpen] = useState(false);
+    const [newTemplateTitle, setNewTemplateTitle] = useState('');
+    const [newTemplateContent, setNewTemplateContent] = useState('');
+    const [newTemplateLayout, setNewTemplateLayout] = useState('');
+    const [creatingTemplate, setCreatingTemplate] = useState(false);
 
     useEffect(() => {
         if (!user || !user.is_admin) return;
-        (async () => {
-            try {
-                const [refs, tpls] = await Promise.all([
-                    fetchReferenceLibrary(),
-                    fetchSchemaTemplates(),
-                ]);
-                setReferences(refs);
-                setTemplates(tpls);
-            } catch (e) {
-                toast.error('Failed to load library');
-            }
-        })();
+        loadData();
     }, [user]);
+
+    const loadData = async () => {
+        try {
+            setLoading(true);
+            const [refs, tpls] = await Promise.all([
+                fetchReferenceLibrary(),
+                fetchSchemaTemplates(),
+            ]);
+            setReferences(refs);
+            setTemplates(tpls);
+        } catch (e) {
+            toast.error('Failed to load library');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleUploadReference = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -77,6 +93,7 @@ export default function LibraryAdminPage() {
     };
 
     const deleteReference = async (id: number) => {
+        if (!confirm('Are you sure you want to delete this reference image?')) return;
         try {
             await adminDeleteReference(id);
             setReferences((prev) => prev.filter((r) => r.id !== id));
@@ -86,22 +103,29 @@ export default function LibraryAdminPage() {
         }
     };
 
-    const createTemplate = async () => {
-        const title = prompt('Template Title') || '';
-        if (!title) return;
-        const content = prompt('Template Content (Golden Schema)') || '';
-        if (!content) return;
+    const handleCreateTemplate = async () => {
+        if (!newTemplateTitle.trim() || !newTemplateContent.trim()) {
+            toast.error('Title and Content are required');
+            return;
+        }
+        setCreatingTemplate(true);
         try {
             const created = await adminCreateTemplate({
-                title,
-                layout: '',
-                content,
+                title: newTemplateTitle,
+                layout: newTemplateLayout,
+                content: newTemplateContent,
                 order: templates.length,
             });
             setTemplates((prev) => [...prev, created]);
             toast.success('Template created');
+            setIsCreateTemplateOpen(false);
+            setNewTemplateTitle('');
+            setNewTemplateContent('');
+            setNewTemplateLayout('');
         } catch {
             toast.error('Create failed');
+        } finally {
+            setCreatingTemplate(false);
         }
     };
 
@@ -116,6 +140,7 @@ export default function LibraryAdminPage() {
     };
 
     const deleteTemplate = async (id: number) => {
+        if (!confirm('Are you sure you want to delete this template?')) return;
         try {
             await adminDeleteTemplate(id);
             setTemplates((prev) => prev.filter((t) => t.id !== id));
@@ -131,27 +156,40 @@ export default function LibraryAdminPage() {
         update: (id: number, patch: Partial<T>) => Promise<unknown>
     ) => {
         const sorted = [...items].sort((a, b) => a.order - b.order);
+        // This simple reorder just saves the current sorted state as order indices
+        // Ideally we would have drag and drop, but for now we just rely on manual order input and then "Save Order" to normalize
         sorted.forEach((item, index) => (item.order = index));
         setItems(sorted);
         for (const item of sorted) {
             await update(item.id, { order: item.order } as Partial<T>);
         }
-        toast.success('Order updated');
+        toast.success('Order normalized and saved');
     };
 
-    if (!user || !user.is_admin) {
-        return <div className="p-6">Admin only</div>;
-    }
+    if (loading) return <div className="p-8">Loading library...</div>;
 
     return (
-        <div className="min-h-screen bg-slate-50/50 p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-7xl mx-auto">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Reference Images</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="mb-4">
+        <div className="space-y-6">
+            <div>
+                <h1 className="text-2xl font-bold text-slate-800">Reference Library</h1>
+                <p className="text-slate-500">Manage reference images and schema templates for the AI.</p>
+            </div>
+
+            <Tabs defaultValue="images" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 lg:w-[400px] mb-6">
+                    <TabsTrigger value="images" className="flex items-center gap-2">
+                        <ImageIcon className="w-4 h-4" />
+                        Reference Images
+                    </TabsTrigger>
+                    <TabsTrigger value="templates" className="flex items-center gap-2">
+                        <FileCode className="w-4 h-4" />
+                        Schema Templates
+                    </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="images" className="space-y-4">
+                    <div className="flex items-center justify-between bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                        <div className="flex items-center gap-2">
                             <input
                                 ref={fileInputRef}
                                 type="file"
@@ -159,103 +197,182 @@ export default function LibraryAdminPage() {
                                 className="hidden"
                                 onChange={handleUploadReference}
                             />
-                            <Button onClick={() => fileInputRef.current?.click()}>
+                            <Button onClick={() => fileInputRef.current?.click()} className="bg-indigo-600 hover:bg-indigo-700">
                                 <Upload className="w-4 h-4 mr-2" />
                                 Upload Reference
                             </Button>
-                            <Button
-                                variant="outline"
-                                className="ml-2"
-                                onClick={() => reorder(references, setReferences, (id, patch) => adminUpdateReference(id, patch))}
-                            >
-                                Save Order
-                            </Button>
                         </div>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                            {references.map((ref, idx) => (
-                                <div key={ref.id} className="border border-slate-200 rounded-lg overflow-hidden">
-                                    <img src={ref.image_data} alt={ref.title} className="w-full h-28 object-cover" />
-                                    <div className="p-2">
-                                        <Input
-                                            value={ref.title}
-                                            onChange={(e) => updateReferenceField(ref.id, { title: e.target.value })}
-                                        />
-                                        <Textarea
-                                            className="mt-2"
-                                            value={ref.description || ''}
-                                            onChange={(e) => updateReferenceField(ref.id, { description: e.target.value })}
-                                        />
-                                        <div className="flex items-center justify-between mt-2">
-                                            <Input
-                                                type="number"
-                                                className="w-24"
-                                                value={ref.order}
-                                                onChange={(e) => updateReferenceField(ref.id, { order: Number(e.target.value) })}
-                                            />
-                                            <Button variant="destructive" size="sm" onClick={() => deleteReference(ref.id)}>
-                                                <Trash2 className="w-4 h-4 mr-1" />
-                                                Delete
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
+                        <Button
+                            variant="outline"
+                            onClick={() => reorder(references, setReferences, (id, patch) => adminUpdateReference(id, patch))}
+                        >
+                            <Save className="w-4 h-4 mr-2" />
+                            Normalize Order
+                        </Button>
+                    </div>
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Schema Templates</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="mb-4">
-                            <Button onClick={createTemplate}>New Template</Button>
-                            <Button
-                                variant="outline"
-                                className="ml-2"
-                                onClick={() => reorder(templates, setTemplates, (id, patch) => adminUpdateTemplate(id, patch))}
-                            >
-                                Save Order
-                            </Button>
-                        </div>
-                        <div className="space-y-3">
-                            {templates.map((tpl) => (
-                                <div key={tpl.id} className="border border-slate-200 rounded-lg p-3">
-                                    <Input
-                                        value={tpl.title}
-                                        onChange={(e) => updateTemplateField(tpl.id, { title: e.target.value })}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                        {references.sort((a, b) => a.order - b.order).map((ref) => (
+                            <Card key={ref.id} className="group overflow-hidden hover:shadow-md transition-all">
+                                <div className="aspect-video w-full overflow-hidden bg-slate-100 relative">
+                                    <img 
+                                        src={ref.image_data} 
+                                        alt={ref.title} 
+                                        className="w-full h-full object-cover transition-transform group-hover:scale-105" 
                                     />
-                                    <Input
-                                        className="mt-2"
-                                        placeholder="Layout"
-                                        value={tpl.layout || ''}
-                                        onChange={(e) => updateTemplateField(tpl.id, { layout: e.target.value })}
-                                    />
-                                    <Textarea
-                                        className="mt-2 font-mono text-xs"
-                                        rows={6}
-                                        value={tpl.content}
-                                        onChange={(e) => updateTemplateField(tpl.id, { content: e.target.value })}
-                                    />
-                                    <div className="flex items-center justify-between mt-2">
-                                        <Input
-                                            type="number"
-                                            className="w-24"
-                                            value={tpl.order}
-                                            onChange={(e) => updateTemplateField(tpl.id, { order: Number(e.target.value) })}
-                                        />
-                                        <Button variant="destructive" size="sm" onClick={() => deleteTemplate(tpl.id)}>
-                                            <Trash2 className="w-4 h-4 mr-1" />
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                        <Button variant="destructive" size="sm" onClick={() => deleteReference(ref.id)}>
+                                            <Trash2 className="w-4 h-4 mr-2" />
                                             Delete
                                         </Button>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
+                                <CardContent className="p-4 space-y-3">
+                                    <div className="space-y-1">
+                                        <Label className="text-xs text-slate-500">Title</Label>
+                                        <Input
+                                            value={ref.title}
+                                            onChange={(e) => updateReferenceField(ref.id, { title: e.target.value })}
+                                            className="h-8 text-sm"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-xs text-slate-500">Description</Label>
+                                        <Textarea
+                                            value={ref.description || ''}
+                                            onChange={(e) => updateReferenceField(ref.id, { description: e.target.value })}
+                                            className="h-16 text-xs resize-none"
+                                        />
+                                    </div>
+                                    <div className="flex items-center justify-between pt-2">
+                                        <div className="flex items-center gap-2">
+                                            <Label className="text-xs text-slate-500">Order</Label>
+                                            <Input
+                                                type="number"
+                                                className="w-16 h-7 text-xs"
+                                                value={ref.order}
+                                                onChange={(e) => updateReferenceField(ref.id, { order: Number(e.target.value) })}
+                                            />
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                </TabsContent>
+
+                <TabsContent value="templates" className="space-y-4">
+                    <div className="flex items-center justify-between bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                        <Dialog open={isCreateTemplateOpen} onOpenChange={setIsCreateTemplateOpen}>
+                            <DialogTrigger asChild>
+                                <Button className="bg-indigo-600 hover:bg-indigo-700">
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    New Template
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-2xl">
+                                <DialogHeader>
+                                    <DialogTitle>Create New Schema Template</DialogTitle>
+                                    <DialogDescription>Define a reusable schema structure.</DialogDescription>
+                                </DialogHeader>
+                                <div className="space-y-4 py-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label>Title</Label>
+                                            <Input 
+                                                value={newTemplateTitle}
+                                                onChange={(e) => setNewTemplateTitle(e.target.value)}
+                                                placeholder="e.g. Bar Chart Template"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Layout (Optional)</Label>
+                                            <Input 
+                                                value={newTemplateLayout}
+                                                onChange={(e) => setNewTemplateLayout(e.target.value)}
+                                                placeholder="e.g. 1x1, 2x2"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Content (JSON Schema / Text)</Label>
+                                        <Textarea 
+                                            value={newTemplateContent}
+                                            onChange={(e) => setNewTemplateContent(e.target.value)}
+                                            placeholder="{ ... }"
+                                            className="font-mono text-sm h-64"
+                                        />
+                                    </div>
+                                </div>
+                                <DialogFooter>
+                                    <Button variant="outline" onClick={() => setIsCreateTemplateOpen(false)}>Cancel</Button>
+                                    <Button onClick={handleCreateTemplate} disabled={creatingTemplate}>
+                                        {creatingTemplate ? 'Creating...' : 'Create Template'}
+                                    </Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
+                        <Button
+                            variant="outline"
+                            onClick={() => reorder(templates, setTemplates, (id, patch) => adminUpdateTemplate(id, patch))}
+                        >
+                            <Save className="w-4 h-4 mr-2" />
+                            Normalize Order
+                        </Button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {templates.sort((a, b) => a.order - b.order).map((tpl) => (
+                            <Card key={tpl.id} className="group hover:shadow-md transition-all border-slate-200">
+                                <CardHeader className="pb-2 bg-slate-50/50 border-b border-slate-100">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex-1 mr-4">
+                                            <Input
+                                                value={tpl.title}
+                                                onChange={(e) => updateTemplateField(tpl.id, { title: e.target.value })}
+                                                className="font-semibold bg-transparent border-none shadow-none focus-visible:ring-0 px-0 h-auto text-lg"
+                                            />
+                                        </div>
+                                        <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => deleteTemplate(tpl.id)}>
+                                            <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="p-4 space-y-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1">
+                                            <Label className="text-xs text-slate-500">Layout</Label>
+                                            <Input
+                                                className="h-8 text-sm"
+                                                placeholder="Layout"
+                                                value={tpl.layout || ''}
+                                                onChange={(e) => updateTemplateField(tpl.id, { layout: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <Label className="text-xs text-slate-500">Order</Label>
+                                            <Input
+                                                type="number"
+                                                className="h-8 text-sm"
+                                                value={tpl.order}
+                                                onChange={(e) => updateTemplateField(tpl.id, { order: Number(e.target.value) })}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-xs text-slate-500">Content</Label>
+                                        <Textarea
+                                            className="font-mono text-xs h-48 resize-none bg-slate-50"
+                                            value={tpl.content}
+                                            onChange={(e) => updateTemplateField(tpl.id, { content: e.target.value })}
+                                        />
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                </TabsContent>
+            </Tabs>
         </div>
     );
 }

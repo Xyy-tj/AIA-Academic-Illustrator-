@@ -7,6 +7,7 @@ import { useWorkflowStore } from '@/store/workflowStore';
 import { useTranslation } from '@/lib/i18n';
 import { motion } from 'framer-motion';
 import { resolveImageUrl } from '@/lib/utils';
+import { PromptExportButton } from '@/components/PromptExportButton';
 
 export function RendererStep() {
     const {
@@ -21,11 +22,12 @@ export function RendererStep() {
     const handleDownloadImage = () => {
         if (!generatedImage) return;
 
+        const resolvedUrl = resolveImageUrl(generatedImage);
+        if (!resolvedUrl) return;
+
         const link = document.createElement('a');
-        if (generatedImage.startsWith('data:')) {
-            link.href = generatedImage;
-        } else {
-            link.href = generatedImage;
+        link.href = resolvedUrl;
+        if (!resolvedUrl.startsWith('data:')) {
             link.target = '_blank';
         }
         link.download = `academic-diagram-${Date.now()}.png`;
@@ -55,7 +57,16 @@ export function RendererStep() {
                     <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="font-semibold text-slate-900">{t('generatedDiagram')}</h3>
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 items-center">
+                                <PromptExportButton 
+                                    promptType="renderer"
+                                    payload={{
+                                        visual_schema: generatedSchema
+                                    }}
+                                    disabled={!generatedSchema}
+                                    variant="outline"
+                                />
+
                                 <Button
                                     variant="outline"
                                     size="sm"

@@ -23,7 +23,7 @@ export function Stepper() {
     };
 
     return (
-        <div className="w-full max-w-4xl mx-auto py-8">
+        <div className="w-full max-w-4xl mx-auto py-2">
             <div className="relative flex items-center justify-between px-4">
                 {/* Background Line */}
                 <div className="absolute top-1/2 left-0 w-full h-1 bg-slate-100 rounded-full -z-10" />
@@ -99,7 +99,7 @@ export function Stepper() {
                 })}
             </div>
             {/* Spacer for the labels */}
-            <div className="h-24" />
+            <div className="h-16" />
         </div>
     );
 }

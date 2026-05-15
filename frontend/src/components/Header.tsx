@@ -1,6 +1,6 @@
 'use client';
 
-import { RotateCcw, Globe, LogOut, User as UserIcon, Shield, RefreshCcw, CreditCard } from 'lucide-react';
+import { RotateCcw, Globe, LogOut, User as UserIcon, Shield, RefreshCcw, CreditCard, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useWorkflowStore } from '@/store/workflowStore';
 import { useAuthStore } from '@/store/authStore';
@@ -11,18 +11,24 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { fetchPublicSettings } from '@/lib/api';
 import { UserCenterDialog } from '@/components/UserCenterDialog';
+import { RechargeModal } from '@/components/RechargeModal';
+import { AuthModal } from '@/components/AuthModal';
 
 export function Header() {
-    const { language, setLanguage, resetProject, setAnnouncementOpen } = useWorkflowStore();
+    const { language, setLanguage, resetProject, setAnnouncementOpen, setAuthModalOpen, setAuthModalTab } = useWorkflowStore();
     const { user, logout, setUser, token } = useAuthStore();
     const t = useTranslation(language);
     const router = useRouter();
     const [logoUrl, setLogoUrl] = useState<string | null>(null);
+    const [siteName, setSiteName] = useState<string | null>(null);
     const [userCenterOpen, setUserCenterOpen] = useState(false);
+    const [userCenterTab, setUserCenterTab] = useState('profile');
+    const [rechargeOpen, setRechargeOpen] = useState(false);
 
     useEffect(() => {
         fetchPublicSettings().then(s => {
             if (s.site_logo) setLogoUrl(s.site_logo);
+            if (s.site_name) setSiteName(s.site_name);
         }).catch(() => {});
     }, []);
 
@@ -37,7 +43,7 @@ export function Header() {
 
     const handleLogout = () => {
         logout();
-        router.push('/login');
+        router.push('/');
     };
 
     const refreshUser = async () => {
@@ -59,7 +65,7 @@ export function Header() {
                 animate={{ y: 0, opacity: 1 }}
                 className="sticky top-4 z-50 px-4 mb-8"
             >
-                <div className="max-w-7xl mx-auto glass-panel rounded-2xl px-4 sm:px-6">
+                <div className="w-full max-w-[1600px] mx-auto glass-panel rounded-2xl px-4 sm:px-6">
                     <div className="flex items-center justify-between h-16">
                         <Link href="/" className="flex items-center gap-3 group">
                             {logoUrl ? (
@@ -70,7 +76,7 @@ export function Header() {
                                 </div>
                             )}
                             <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-                                {t('appTitle')}
+                                {siteName || t('appTitle')}
                             </h1>
                         </Link>
 
@@ -94,7 +100,7 @@ export function Header() {
                                         <button
                                             type="button"
                                             className="flex items-center gap-2 text-xs leading-none hover:opacity-80 transition-opacity"
-                                            onClick={() => setUserCenterOpen(true)}
+                                            onClick={() => { setUserCenterTab('profile'); setUserCenterOpen(true); }}
                                         >
                                             <div className="flex flex-col items-end">
                                                 <span className="font-semibold text-slate-700">
@@ -111,11 +117,18 @@ export function Header() {
                                         <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-white hover:shadow-sm transition-all" title="Refresh quota" onClick={refreshUser}>
                                             <RefreshCcw className="w-3.5 h-3.5 text-slate-500" />
                                         </Button>
-                                        <Link href="/recharge">
-                                            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-indigo-50 hover:text-indigo-600 transition-all" title="Recharge">
-                                                <CreditCard className="w-3.5 h-3.5" />
-                                            </Button>
-                                        </Link>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="h-7 w-7 rounded-full hover:bg-indigo-50 hover:text-indigo-600 transition-all" 
+                                            title="Recharge"
+                                            onClick={() => setRechargeOpen(true)}
+                                        >
+                                            <CreditCard className="w-3.5 h-3.5" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-indigo-50 hover:text-indigo-600 transition-all" title="History" onClick={() => { setUserCenterTab('history'); setUserCenterOpen(true); }}>
+                                            <History className="w-3.5 h-3.5" />
+                                        </Button>
                                         <div className="h-4 w-[1px] bg-slate-200 mx-1" />
                                         <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-red-50 hover:text-red-600 transition-all" title="Logout" onClick={handleLogout}>
                                             <LogOut className="w-3.5 h-3.5" />
@@ -124,12 +137,19 @@ export function Header() {
                                 </div>
                             ) : (
                                 <div className="flex items-center gap-2">
-                                    <Link href="/login">
-                                        <Button variant="ghost" className="rounded-full">Log in</Button>
-                                    </Link>
-                                    <Link href="/register">
-                                        <Button className="rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20">Get Started</Button>
-                                    </Link>
+                                    <Button 
+                                        variant="ghost" 
+                                        className="rounded-full"
+                                        onClick={() => { setAuthModalTab('login'); setAuthModalOpen(true); }}
+                                    >
+                                        Log in
+                                    </Button>
+                                    <Button 
+                                        className="rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20"
+                                        onClick={() => { setAuthModalTab('register'); setAuthModalOpen(true); }}
+                                    >
+                                        Get Started
+                                    </Button>
                                 </div>
                             )}
 
@@ -158,7 +178,9 @@ export function Header() {
                     </div>
                 </div>
             </motion.header>
-            <UserCenterDialog open={userCenterOpen} onOpenChange={setUserCenterOpen} />
+            <UserCenterDialog open={userCenterOpen} onOpenChange={setUserCenterOpen} initialTab={userCenterTab} />
+            <RechargeModal open={rechargeOpen} onOpenChange={setRechargeOpen} />
+            <AuthModal />
         </>
     );
 }

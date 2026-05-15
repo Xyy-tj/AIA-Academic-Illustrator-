@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { fetchPublicSettings, PublicSettings } from '@/lib/api';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useWorkflowStore } from '@/store/workflowStore';
 
 export function AnnouncementModal() {
@@ -29,8 +29,20 @@ export function AnnouncementModal() {
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{settings?.announcement_title || '网站公告'}</DialogTitle>
+          <DialogDescription className="sr-only">
+             重要系统公告，请仔细阅读。
+          </DialogDescription>
         </DialogHeader>
         <div className="prose prose-sm max-w-none text-slate-700 whitespace-pre-wrap max-h-[60vh] overflow-y-auto">
+          {settings?.announcement_image_url && (
+            <div className="mb-4 rounded-lg overflow-hidden border border-slate-100">
+                <img 
+                    src={settings.announcement_image_url} 
+                    alt="Announcement" 
+                    className="w-full h-auto object-cover"
+                />
+            </div>
+          )}
           {settings?.announcement_body || '暂无公告'}
         </div>
       </DialogContent>

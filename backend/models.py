@@ -72,14 +72,53 @@ class SystemSettings(SQLModel, table=True):
     recharge_ratio: int = 1  # quota units per 1 currency unit
     site_logo: Optional[str] = None
     site_favicon: Optional[str] = None
+    site_name: str = "Academic Illustrator"
     # Site footer declaration
     footer_text: Optional[str] = None
     # Site announcement
     announcement_enabled: bool = False
     announcement_title: Optional[str] = None
     announcement_body: Optional[str] = None
+    announcement_image_url: Optional[str] = None
     announcement_last_updated: Optional[datetime] = None
+    # Aliyun Image Enhancement
+    aliyun_access_key_id: Optional[str] = None
+    aliyun_access_key_secret: Optional[str] = None
+    aliyun_endpoint: str = "imageenhan.cn-shanghai.aliyuncs.com"
+    # Storage settings
+    storage_type: str = Field(default="local")  # 'local' or 'cos'
+    cos_secret_id: Optional[str] = None
+    cos_secret_key: Optional[str] = None
+    cos_region: Optional[str] = None
+    cos_bucket: Optional[str] = None
+    cos_path_prefix: str = ""
+    # Quota Costs
+    cost_schema_generation: int = 1
+    cost_image_rendering: int = 1
+    cost_extraction: int = 1
+    cost_translation: int = 1
+    cost_super_resolution: int = 1
+    cost_ppt_generation: int = 2
+    initial_quota: int = 2
     updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class RedemptionCode(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    code: str = Field(index=True, unique=True)
+    type: str  # 'once' or 'repeat'
+    quota: int
+    max_uses: int = 1
+    used_count: int = 0
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class RedemptionLog(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(index=True)
+    code_id: int = Field(index=True)
+    redeemed_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 class GenerationHistory(SQLModel, table=True):
@@ -131,3 +170,28 @@ class SchemaTemplate(SQLModel, table=True):
     content: str
     order: int = 0
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class PromptConfig(SQLModel, table=True):
+    key: str = Field(primary_key=True)
+    value: str = Field(sa_type=TEXT)
+    description: Optional[str] = None
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class PPTStyle(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str
+    description: Optional[str] = None
+    prompt_suffix: str = Field(sa_type=TEXT)  # The style-specific prompt part
+    preview_image_url: Optional[str] = None
+    is_active: bool = True
+    order: int = 0
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class HelpGuide(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    key: str = Field(index=True, unique=True)  # e.g., 'ppt_export', 'architect_export'
+    title: str
+    images: str = Field(sa_type=TEXT, default="[]")  # JSON list of image URLs
+    updated_at: datetime = Field(default_factory=datetime.utcnow)

@@ -7,6 +7,7 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
+    DialogDescription,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
@@ -51,6 +52,9 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                                 <DialogTitle className="text-xl font-semibold text-slate-900">
                                     {t('settingsTitle')}
                                 </DialogTitle>
+                                <DialogDescription className="sr-only">
+                                    {t('settingsDescription')}
+                                </DialogDescription>
                             </DialogHeader>
 
                             <Tabs defaultValue="logic" className="mt-6">
